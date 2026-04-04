@@ -74,6 +74,8 @@ The KV cache is smaller than dense-model estimates would suggest. In MoE archite
 
 Claude Code connects to llama-server via the OpenAI-compatible chat completions endpoint. No modifications to Claude Code are required.
 
+![Claude Code connected to Gemma 4 26B local backend](images/claude-gemma-welcome.png)
+
 ### Optimization Progression
 
 | Config | VRAM | Throughput | Context |
