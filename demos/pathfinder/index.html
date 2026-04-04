@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A* Pathfinder Demo</title>
+    <style>
+        body {
+            background-color: #1a1a2e;
+            color: white;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        #status {
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            height: 1.5em;
+        }
+        canvas {
+            border: 2px solid #0f3460;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            cursor: crosshair;
+        }
+    </style>
+</head>
+<body>
+    <div id="status">Press Space to find path</div>
+    <canvas id="gridCanvas"></canvas>
+
+    <script>
+        /**
+         * A* pathfinding implementation.
+         *
+         * @param {number[][]} grid - 2D array where 0 is empty and 1 is a wall.
+         * @param {{row: number, col: number}} start - Starting position.
+         * @param {{row: number, col: number}} end - Target position.
+         * @returns {{path: {row: number, col: number}[], visited: {row: number, col: number}[]}}
+         */
+        function findPath(grid, start, end) {
+            const rows = grid.length;
+            const cols = grid[0].length;
+
+            const heuristic = (a, b) => Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
+
+            const openSet = [start];
+            const cameFrom = new Map();
+
+            const gScore = Array.from({ length: rows }, () => Array(cols).fill(Infinity));
+            gScore[start.row][start.col] = 0;
+
+            const fScore = Array.from({ length: rows }, () => Array(cols).fill(Infinity));
+            fScore[start.row][start.col] = heuristic(start, end);
+
+            const visited = [];
+            const closedSet = new Set();
+
+            while (openSet.length > 0) {
+                let currentIndex = 0;
+                for (let i = 1; i < openSet.length; i++) {
+                    if (fScore[openSet[i].row][openSet[i].col] < fScore[openSet[currentIndex].row][openSet[currentIndex].col]) {
+                        currentIndex = i;
+                    }
+                }
+
+                const current = openSet[currentIndex];
+
+                if (current.row === end.row && current.col === end.col) {
+                    const path = [];
+                    let temp = current;
+                    while (temp) {
+                        path.unshift(temp);
+                        temp = cameFrom.get(`${temp.row},${temp.col}`);
+                    }
+                    return { path, visited };
+                }
+
+                openSet.splice(currentIndex, 1);
+                closedSet.add(`${current.row},${current.col}`);
+                visited.push(current);
+
+                const neighbors = [
+                    { row: current.row - 1, col: current.col },
+                    { row: current.row + 1, col: current.col },
+                    { row: current.row, col: current.col - 1 },
+                    { row: current.row, col: current.col + 1 },
+                ];
+
+                for (const neighbor of neighbors) {
+                    if (
+                        neighbor.row >= 0 && neighbor.row < rows &&
+                        neighbor.col >= 0 && neighbor.col < cols &&
+                        grid[neighbor.row][neighbor.col] === 0 &&
+                        !closedSet.has(`${neighbor.row},${neighbor.col}`)
+                    ) {
+                        const tentativeGScore = gScore[current.row][current.col] + 1;
+
+                        if (tentativeGScore < gScore[neighbor.row][neighbor.col]) {
+                            cameFrom.set(`${neighbor.row},${neighbor.col}`, current);
+                            gScore[neighbor.row][neighbor.col] = tentativeGScore;
+                            fScore[neighbor.row][neighbor.col] = tentativeGScore + heuristic(neighbor, end);
+
+                            if (!openSet.some(node => node.row === neighbor.row && node.col === neighbor.col)) {
+                                openSet.push(neighbor);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return { path: [], visited };
+        }
+
+        const ROWS = 20;
+        const COLS = 30;
+        const CELL_SIZE = 28;
+        const GAP = 2;
+        const CANVAS_WIDTH = COLS * (CELL_SIZE + GAP);
+        const CANVAS_HEIGHT = ROWS * (CELL_SIZE + GAP);
+
+        const canvas = document.getElementById('gridCanvas');
+        const ctx = canvas.getContext('2d');
+        const status = document.getElementById('status');
+
+        canvas.width = CANVAS_WIDTH;
+        canvas.height = CANVAS_HEIGHT;
+
+        let grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        let isMouseDown = false;
+
+        const start = { row: 0, col: 0 };
+        const end = { row: ROWS - 1, col: COLS - 1 };
+
+        function drawGrid() {
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    const x = c * (CELL_SIZE + GAP);
+                    const y = r * (CELL_SIZE + GAP);
+
+                    if (grid[r][c] === 1) {
+                        ctx.fillStyle = '#e94560';
+                    } else {
+                        ctx.fillStyle = '#16213e';
+                    }
+                    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+
+                    if (r === start.row && c === start.col) {
+                        ctx.fillStyle = '#4ade80';
+                        ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                    } else if (r === end.row && c === end.col) {
+                        ctx.fillStyle = '#ef4444';
+                        ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                    }
+                }
+            }
+        }
+
+        function handleMouse(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const col = Math.floor(mouseX / (CELL_SIZE + GAP));
+            const row = Math.floor(mouseY / (CELL_SIZE + GAP));
+
+            if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
+                if ((row === start.row && col === start.col) || (row === end.row && col === end.col)) return;
+                grid[row][col] = 1;
+                drawGrid();
+            }
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            isMouseDown = true;
+            handleMouse(e);
+        });
+
+        window.addEventListener('mouseup', () => {
+            isMouseDown = false;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (isMouseDown) {
+                handleMouse(e);
+            }
+        });
+
+        async function runPathfinding() {
+            drawGrid();
+            status.innerText = "Finding path...";
+
+            const { path, visited } = findPath(grid, start, end);
+
+            if (path.length === 0) {
+                status.innerText = "No path found!";
+                return;
+            }
+
+            status.innerText = "Path found!";
+
+            // Animate visited cells
+            for (const node of visited) {
+                const x = node.col * (CELL_SIZE + GAP);
+                const y = node.row * (CELL_SIZE + GAP);
+
+                ctx.fillStyle = '#533483';
+                ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+
+                if (node.row === start.row && node.col === start.col) {
+                    ctx.fillStyle = '#4ade80';
+                    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                } else if (node.row === end.row && node.col === end.col) {
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                }
+
+                await new Promise(r => setTimeout(r, 30));
+            }
+
+            // Draw path
+            for (const node of path) {
+                const x = node.col * (CELL_SIZE + GAP);
+                const y = node.row * (CELL_SIZE + GAP);
+
+                ctx.fillStyle = '#facc15';
+                ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+
+                if (node.row === start.row && node.col === start.col) {
+                    ctx.fillStyle = '#4ade80';
+                    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                } else if (node.row === end.row && node.col === end.col) {
+                    ctx.fillStyle = '#ef4444';
+                    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                }
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                runPathfinding();
+            }
+        });
+
+        drawGrid();
+    </script>
+</body>
+</html>
