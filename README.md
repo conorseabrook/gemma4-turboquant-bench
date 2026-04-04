@@ -184,11 +184,27 @@ Tests are in [tests/](tests/). Each level directory contains a `prompt.md` with 
 - The constrained system prompt is required. Results without it are not comparable.
 - Ollama does not support TurboQuant as of April 2026.
 
+## Timeline
+
+This configuration was assembled within 48 hours of both component releases:
+
+| Date | Event |
+|------|-------|
+| March 24, 2026 | TurboQuant paper published by Google Research ([blog post](https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/)) |
+| March 2026 | Community llama.cpp forks add TurboQuant CUDA support ([TheTom](https://github.com/TheTom/llama-cpp-turboquant), [spiritbuun](https://github.com/spiritbuun/llama-cpp-turboquant-cuda)) |
+| April 2, 2026 | Gemma 4 released by Google DeepMind under Apache 2.0 ([announcement](https://blog.google/innovation-and-ai/technology/developers-tools/gemma-4/)) |
+| April 4, 2026 | This benchmark conducted |
+
+As of April 2026, TurboQuant is not yet merged into mainline llama.cpp ([upstream discussion](https://github.com/ggml-org/llama.cpp/discussions/20969), [CPU-only PR](https://github.com/ggml-org/llama.cpp/pull/21089)) and is not supported by Ollama.
+
 ## References
 
 - Zandieh et al., "QJL: 1-Bit Quantized JL Transform for KV Cache Quantization with Zero Overhead", ICLR 2026. [arXiv:2504.19874](https://arxiv.org/abs/2504.19874)
+- Google Research, "TurboQuant: Redefining AI efficiency with extreme compression", March 2026. [Blog post](https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/)
+- Google DeepMind, "Gemma 4: Our most capable open models to date", April 2026. [Announcement](https://blog.google/innovation-and-ai/technology/developers-tools/gemma-4/)
 - [Gemma 4 Model Card](https://ai.google.dev/gemma/docs)
 - [llama.cpp](https://github.com/ggml-org/llama.cpp)
+- [TheTom/llama-cpp-turboquant](https://github.com/TheTom/llama-cpp-turboquant) — fork used in this project
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 
 ## License
