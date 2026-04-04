@@ -1,4 +1,4 @@
-# Gemma 4 26B + TurboQuant: 262K Context on a Single RTX 4090
+# Gemma 4 26B + TurboQuant on a Single RTX 4090
 
 Serving Gemma 4 26B-A4B at its full 262K native context window on a single RTX 4090 (24 GB VRAM) using TurboQuant 3-bit KV cache compression. Includes an agentic coding benchmark run through Claude Code.
 
