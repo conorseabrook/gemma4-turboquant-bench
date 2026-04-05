@@ -8,6 +8,8 @@ Google's [Gemma 4 26B-A4B](https://blog.google/innovation-and-ai/technology/deve
 
 ## Configuration
 
+[llama.cpp](https://github.com/ggml-org/llama.cpp) is the inference engine that loads the model into GPU memory and serves it via an HTTP API. TurboQuant KV cache compression is not yet merged into mainline llama.cpp or supported by higher-level tools like Ollama, so this setup uses a [community fork](https://github.com/TheTom/llama-cpp-turboquant) compiled from source with CUDA Flash Attention enabled. Full build instructions: [docs/build-guide.md](docs/build-guide.md)
+
 ### Inference Stack
 
 | Parameter | Value |
