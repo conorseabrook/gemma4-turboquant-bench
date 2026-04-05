@@ -53,8 +53,6 @@ KV cache is smaller than dense-model estimates because MoE attention layers are 
 | Generation (concurrent) | ~83–85 tok/s |
 | Prefill | ~5,600 tok/s |
 
-![llama-server timing output](images/server-timing.png)
-
 ### Architecture
 
 ```
