@@ -16,7 +16,7 @@ Google's [Gemma 4 26B-A4B](https://blog.google/innovation-and-ai/technology/deve
 | Architecture | MoE — 128 experts, 8 active per forward pass |
 | Total / active parameters | 25.8B / ~4B |
 | Weight quantization | Q5_K_M (5-bit, GGUF) |
-| KV cache quantization | turbo3 (3-bit, [TurboQuant](https://arxiv.org/abs/2504.19874)) |
+| KV cache quantization | turbo3 (3-bit, [TurboQuant](https://arxiv.org/abs/2504.19874)) — selected over turbo4 for faster prefill via tensor-core MMA codepath |
 | Context window | 262,144 tokens |
 | Inference engine | [TheTom/llama-cpp-turboquant](https://github.com/TheTom/llama-cpp-turboquant) (branch `feature/turboquant-kv-cache`) |
 | Flash Attention | Required for turbo KV types (`-fa on`) |
@@ -41,7 +41,7 @@ Google's [Gemma 4 26B-A4B](https://blog.google/innovation-and-ai/technology/deve
 | Overhead | ~1.3 GB |
 | **Total (with vision)** | **23.5 / 24.6 GB** |
 
-KV cache is smaller than dense-model estimates because MoE attention layers are shared across experts. Cache size scales with attention dimensions, not total parameter count. Without TurboQuant (FP16 KV), 262K context would require ~16 GB for KV alone — exceeding the 4090's capacity.
+KV cache is smaller than dense-model estimates because MoE attention layers are shared across experts — cache scales with attention dimensions, not total parameter count. Without TurboQuant (FP16 KV), 262K context would require ~16 GB for KV alone, exceeding the 4090's capacity.
 
 ![RTX 4090 VRAM utilization — 22 of 24 GB under load](images/gpu-vram.png)
 
@@ -53,43 +53,7 @@ KV cache is smaller than dense-model estimates because MoE attention layers are 
 | Generation (concurrent) | ~83–85 tok/s |
 | Prefill | ~5,600 tok/s |
 
-### Architecture
-
-```
-┌──────────────────────────────────────┐     ┌──────────────────────────────────┐
-│         MAC (Client)                 │     │       WINDOWS PC (Server)        │
-│                                      │     │                                  │
-│  Claude Code CLI                     │     │  llama-server.exe                │
-│    │                                 │     │    ├─ Gemma 4 26B-A4B (Q5_K_M)  │
-│    │  Anthropic Messages API         │     │    ├─ TurboQuant turbo3 KV cache │
-│    └─────────────────────────────────┼────▶│    ├─ CUDA Flash Attention       │
-│      http://<server-ip>:8081         │     │    └─ 262K context window        │
-└──────────────────────────────────────┘     └──────────────────────────────────┘
-```
-
 Claude Code connects to llama-server via the OpenAI-compatible chat completions endpoint. No modifications to Claude Code are required.
-
-### Quantization Tradeoffs
-
-**Weight quantization (Q4 vs Q5):** Q5_K_M allocates 5 bits per weight vs Q4_K_M's 4 bits. Both use k-quant mixed precision, assigning higher bit depth to attention and output layers. Q5 uses ~2 GB more VRAM and is ~8% slower but preserves more weight precision. TurboQuant's KV cache savings were reinvested into Q5 over Q4.
-
-**KV cache quantization (turbo3 vs turbo4):**
-
-| Mode | Bits | Compression | Notes |
-|------|------|-------------|-------|
-| turbo3 | 3 | 4.9x | Tensor-core MMA codepath — faster prefill |
-| turbo4 | 4 | 3.8x | QJL correction uses slower codepath |
-
-turbo3 was selected. Despite lower bit depth, it achieves faster prefill via the MMA codepath. Quality difference is minimal for MoE models where attention is a smaller fraction of total computation.
-
-### Optimization Progression
-
-| Config | VRAM | Throughput | Context |
-|--------|------|------------|---------|
-| Q4_K_M, Ollama (baseline) | 22.0 GB | 113 tok/s | 32K |
-| Q4_K_M, turbo3, FA | 19.1 GB | 139 tok/s | 131K |
-| Q5_K_M, turbo3, FA | 21.5 GB | 129 tok/s | 131K |
-| **Q5_K_M, turbo3, FA** | **22.3 GB** | **129 tok/s** | **262K** |
 
 ## Benchmark
 
@@ -133,6 +97,8 @@ Test definitions, prompts, and fixture files: [tests/](tests/)
 | 6A Test-driven impl | 6 | PASS | 5 | 0 | — | 20/20 pytest cases on first implementation |
 
 **15/15 passed.** Average quality: 4.2/5. Total errors: 7. Self-recovery: 3/3.
+
+Full per-test breakdown: [results/scorecard.md](results/scorecard.md)
 
 ### Observations
 
